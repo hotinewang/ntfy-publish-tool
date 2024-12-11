@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTFY消息推送</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            text-align: left;
+            margin-left: 10px;
+        }
+        input[type="text"], select {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response-code-block {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            font-family: monospace;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>发送消息到NTFY</h2>
+        <label for="serverInput">服务器地址</label>
+        <input type="text" id="serverInput" placeholder="服务器地址" value="https://ntfy.sh">
+        
+        <label for="topicInput">话题</label>
+        <input type="text" id="topicInput" placeholder="话题">
+
+        <label for="titleInput">消息标题（选填）</label>
+        <input type="text" id="titleInput" placeholder="输入消息标题">
+        
+        <label for="messageInput">消息内容</label>
+        <input type="text" id="messageInput" placeholder="输入消息内容">
+        
+        <label for="prioritySelect">优先级</label>
+        <select id="prioritySelect">
+            <option value="1">最低</option>
+            <option value="2">低</option>
+            <option value="3" selected>正常</option>
+            <option value="4">高</option>
+            <option value="5">最高</option>
+        </select>
+        
+        <label for="tagInput">标签（可选）</label>
+        <input type="text" id="tagInput" placeholder="标签（可选）" value="loudspeaker">
+        
+        <button onclick="sendMessage()">发送</button>
+        <pre class="response-code-block" id="responseMessage"></pre>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const server = document.getElementById('serverInput').value;
+            const topic = document.getElementById('topicInput').value;
+            const title = document.getElementById('titleInput').value;
+            const message = document.getElementById('messageInput').value;
+            const priority = document.getElementById('prioritySelect').value;
+            const tag = document.getElementById('tagInput').value;//BUG：多个tag不会被自动拆分
+            const responseMessage = document.getElementById('responseMessage');
+            
+
+            // Clear previous response message
+            responseMessage.textContent = '';
+
+            if (!server || !topic || !message) {
+                responseMessage.textContent = '请填写服务器地址、话题和消息内容';
+                return;
+            }
+
+            responseMessage.textContent = '发送中...\n';
+
+            const payload = { message,topic };
+            if (priority !== '3') payload.priority = Number(priority);//必须是int类型
+            if (tag) payload.tags = tag.split(',');
+            if (title) payload.title = title;
+
+            responseMessage.textContent = '发送中...\n';
+            responseMessage.textContent += JSON.stringify(payload);
+            console.log(JSON.stringify(payload));
+
+            try {
+            	/*const response = await fetch(`${server}${topic}`, {*/
+                const response = await fetch(server, {     
+                    method: 'POST',
+                    /*headers: {
+                        'Content-Type': 'application/json'
+                    },*/
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    responseMessage.textContent = '消息已成功发送\n';
+                    const responseData = await response.json();
+                    responseMessage.textContent =  '服务器返回：\n'+JSON.stringify(responseData, null, 2);
+                } else {
+                    responseMessage.textContent = '发送失败，请重试\n';
+                }
+            } catch (error) {
+                responseMessage.textContent = '发送失败，请检查网络连接\n';
+            }
+        }
+    </script>
+</body>
+</html>
